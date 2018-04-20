@@ -1,7 +1,7 @@
 # Utility Scripts
 
-This repository serves as a backup for utility scripts created by José Pereira.
-Most scripts are deployed using a TKinter GUI.
+This repository serves as a backup for utility scripts created by José Pereira, on the scope of Protein Conformation Prediction.
+Most scripts are deployed using a TKinter GUI. It was last updated on 20 April 2018.
 
 ## Atomizer 1.0
 
