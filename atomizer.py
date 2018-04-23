@@ -311,8 +311,8 @@ class Utils:
         #6. If requested, add labels to data points
         if self.annotate():
             for i, label in enumerate(labels):
-                a = plt.annotate("Cluster {i}\nSize {j}\nStructure {n}"\
-                    .format(i = label[0], j = label[1], n = label[2]),
+                a = plt.annotate("Cluster {i}\nSize {j}\nStructure {n:>3d}"\
+                    .format(i = label[0], j = label[1], n = int(label[2]) + int(self.crop.start())),
                     (rmsd[i],energy[i]), size = Default.FONT_SIZE, ha = "left")
         #7. Save figure
         plt.savefig(Default.PLOT_NAME)
@@ -364,13 +364,17 @@ class Utils:
                     xtc.write(0.1*np.array(frame['xyz']), step=n, time=n)
                     #5.1 Save energy values if energy plots is requested
                     if self.plot_energ():
-                        self.energy[frame['step']] = float(frame['energy'])
+                        self.energy[int(frame['step']) - int(self.crop.start())] = float(frame['energy'])
             self.update_progress_bar()
 
 
     def verify_input(self):
         """
-        
+        Verifies input:
+        1) Checks if dabate exists in the requested server
+        2) Checks if the temperature ID exists in the selected database
+        3) Checks if cut-off is possible
+        4) Checks if STANDARD protein pdb file for RMSD comparison exists
         """
 
         with pymongo.MongoClient(self.db_host(), int(self.db_port())) as server:
