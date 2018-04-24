@@ -296,11 +296,10 @@ class Utils:
                 if len(elem) > 9 and not elem[0] == '|' and not elem[0] == 'cl.':
                     if self.debug_mode():
                         print line
-                    r = float(elem[6])
-                    rmsd.append(total_rmsd[int(elem[0]) - 1])
-                    energy.append(self.energy[int(elem[5])])
+                    rmsd.append(total_rmsd[int(line[0:4]) - 1])
+                    energy.append(self.energy[int(line[19:25])])
                     if self.annotate():
-                        labels.append((elem[0], elem[2], elem[5]))
+                        labels.append((elem[0], elem[2], int(line[19:25])))
         self.max_cluster = len(rmsd) + 1
         self.update_progress_bar()
 
@@ -308,6 +307,10 @@ class Utils:
         self.update_terminal("Plotting RMSD vs energy ...")
         plt.scatter(rmsd, energy, s = [int(l[1]) * Default.BLOB_SCALE for l in labels], color = Default.PLOT_COLOR)
         plt.xlabel("RMSD (Angstrom)"), plt.ylabel("Energy (KJ/mol)")
+        sizes = [int(label[1]) for label in labels]
+        avg_size, std_size = sum(sizes) / len(sizes), np.std(np.asarray(sizes))
+        plt.title("Average cluster size: {avg_size} +/- {std_size}"\
+            .format(avg_size = avg_size, std_size = std_size))
         #6. If requested, add labels to data points
         if self.annotate():
             for i, label in enumerate(labels):
