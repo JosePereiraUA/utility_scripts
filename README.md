@@ -16,7 +16,9 @@ The script requires the pre-installment of the following dependencies:
  * MatPlotLib
  * MDTraj
  * PyMongo
- * ProtoSyn
+ ```diff
+ * - ProtoSyn
+```
  * Numpy
  * Gui (Avaliable from this repository)
  
