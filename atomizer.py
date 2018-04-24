@@ -289,17 +289,24 @@ class Utils:
                 
         #4. Read log file and extract clusters' above defined threshold energies and cluster sizes
         self.update_terminal("Reading clusters from {log_file} ...".format(log_file = log_file))
+        max_value, min_value = None, None
         with open(log_file, 'r') as file_in:
             for line in file_in:
                 elem = line.split()
                 if len(elem) <= 0: continue
                 if len(elem) > 9 and not elem[0] == '|' and not elem[0] == 'cl.':
+                    if max_value == None:
+                        min_value = line.find(elem[5])
+                        max_value = line.find(elem[5]) + len(elem[5])
                     if self.debug_mode():
                         print line
                     rmsd.append(total_rmsd[int(line[0:4]) - 1])
-                    energy.append(self.energy[int(line[19:25])])
+                    try:
+                        energy.append(self.energy[int(line[min_value:max_value])])
+                    except ValueError:
+                        self.error("Input Error", 'Cut-Off is too big, the resulting RMSD values between structures of the same cluster exceeds 10 Angstrom.')
                     if self.annotate():
-                        labels.append((elem[0], elem[2], int(line[19:25])))
+                        labels.append((elem[0], elem[2], int(line[min_value:max_value])))
         self.max_cluster = len(rmsd) + 1
         self.update_progress_bar()
 
@@ -308,9 +315,12 @@ class Utils:
         plt.scatter(rmsd, energy, s = [int(l[1]) * Default.BLOB_SCALE for l in labels], color = Default.PLOT_COLOR)
         plt.xlabel("RMSD (Angstrom)"), plt.ylabel("Energy (KJ/mol)")
         sizes = [int(label[1]) for label in labels]
+        if len(sizes) == 0:
+            self.error('Input Error', 'Cut-Off is too small: no clusters were built.')
         avg_size, std_size = sum(sizes) / len(sizes), np.std(np.asarray(sizes))
-        plt.title("Average cluster size: {avg_size} +/- {std_size}"\
+        plt.title("Average cluster size: {avg_size} +/- {std_size:<.3f}"\
             .format(avg_size = avg_size, std_size = std_size))
+        
         #6. If requested, add labels to data points
         if self.annotate():
             for i, label in enumerate(labels):
@@ -353,7 +363,7 @@ class Utils:
             if int(self.crop.end()) > 0:
                 if int(self.crop.end()) > frames.count():
                     self.error(Default.INPUT_ERROR, "Maximum crop value is {max}".format(max = frames.count()))
-                frames.limit(int(self.crop.end()))
+                frames.limit(int(self.crop.end()) - int(self.crop.start()))
             self.update_progress_bar()
 
             #5. Write XTC file, applying PRINT EVERY settings
