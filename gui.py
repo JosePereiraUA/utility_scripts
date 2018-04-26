@@ -314,7 +314,7 @@ class Step:
         self.n_steps     = 0
         self.print_every = 0
 
-    def config_mdp(self, mdp_dir, n_steps, print_every):
+    def config_mdp(self, mdp_dir):
 
         lines = []
         
@@ -322,10 +322,10 @@ class Step:
             for line in file_in:
                 if line.startswith("nsteps"):
                     line = line[:-2]
-                    line = line + " " + str(n_steps) + '\n'
+                    line = line + " " + str(self.n_steps) + '\n'
                 elif line.startswith("nstxout") or line.startswith("nstenergy") or line.startswith("nstlog") or line.startswith("nstxout-compressed"):
                     line = line[:-2]
-                    line = line + " " + str(print_every) + '\n'
+                    line = line + " " + str(self.print_every) + '\n'
                 lines.append(line)
         
         with open(self.mdp, 'w') as file_out:
