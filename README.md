@@ -25,6 +25,31 @@ The script requires the pre-installment of the following dependencies:
  * A Parallel Tempering Database at a MONGO server
 
 
+## MD Maker 1.0
+
+This script automates the process of running and MD simulation.
+for each simulation step, the user can select the number of steps (or simulation time by multiplying by dt = 0.002), aswell as the frequency of data storage.
+The MD process is comprised of 7 automated steps:
+ 1. Preparation (Adds bounding box and creates topology files)
+ 2. Minimization 1 (Without solvent)
+ 3. Solvation (Adds spc216 water molecules)
+ 4. Minimization 2 (With solvent)
+ 5. NVT equilibration
+ 6. NPT equilibration
+ 7. Data collection
+
+### Prerequisites and dependencies
+
+The script requires the pre-installment of the following dependencies:
+ * Tkinter (including tkMessageBox)
+ * ttkThemes
+ * Gui (Avaliable from this repository)
+ 
+ For the full usage of this script, the following files are required:
+ * An .mdp storage folder (Avaliable from this repository)
+ * A starting .pdb structure
+
+
 ## Analyzer 1.0
 
 This script intends to automize the process of analysing GROMACS MD results. Based on user requests, it can perform up 4 tasks:
