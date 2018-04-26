@@ -27,8 +27,11 @@ class Default(Step):
     ALL_H_FILE     = INPUT_FILE[:-4] + '_all_h.pdb'
     BOXED_FILE     = INPUT_FILE[:-4] + '_boxed.pdb'
     SOLVATED_FILE  = INPUT_FILE[:-4] + '_solvt.pdb'
+    IONIZED_TPR    = INPUT_FILE[:-4] + '_ion.tpr'
+    IONIZED_FILE   = INPUT_FILE[:-4] + '_ion.pdb'
     BOX_SHAPE      = "cubic"
     BOX_SIZE       = 4
+    ION_COUNT      = 2
     DEBUG_MODE     = True
     STEP_TYPES     = ['minimization', 'equilibration', 'collection']
     N_STEPS        = {'minimization': 50000, 'equilibration': 50000, 'collection': 250000}
@@ -62,21 +65,24 @@ class Utils(BasicGUIFunctions):
         """
         
         #Set application's window settings and title
-        self.config_master(master, Default.TITLE, Default.VERSION, Default.RESIZABLE, Default.BACKGROUND)
-        
+        self.config_master(master, Default.TITLE, Default.VERSION, Default.RESIZABLE, Default.BACKGROUND)  
         self.n_steps     = {'minimization': None, 'equilibration': None, 'collection': None}
         self.print_every = {'minimization': None, 'equilibration': None, 'collection': None}
 
-        self.input      = SelectFile(master, "Input PDB:", default_value = Default.INPUT_DIR + '/' + Default.INPUT_FILE,
+        self.input     = SelectFile(master, "Input PDB:", default_value = Default.INPUT_DIR + '/' + Default.INPUT_FILE,
             row = 0, label_width = Default.LABEL_WIDTH)
-        self.mdps       = SelectFile(master, "MDPs directory:", default_value = Default.MDP_DIR,
+        self.mdps      = SelectFile(master, "MDPs directory:", default_value = Default.MDP_DIR,
             row = 1, label_width = Default.LABEL_WIDTH, search_directory_only = True)
-        self.box_size   = Input(master, "Box size (nm):", Default.BOX_SIZE,  row = 2, label_width = Default.LABEL_WIDTH, width = 5)
         
-        master_frame = Frame(master, background = Default.BACKGROUND)
-        master_frame.grid(row = 3)
+        master_frame_1 = Frame(master, background = Default.BACKGROUND)
+        master_frame_1.grid(row = 2, sticky = 'w', pady = Default.PAD)
+        self.box_size  = Input(master_frame_1, "Box size (nm):", Default.BOX_SIZE, label_width = Default.LABEL_WIDTH, width = 5)
+        self.ion_count = Input(master_frame_1, "Number of ions:", Default.ION_COUNT, label_width = Default.LABEL_WIDTH, width = 5, column = 1)
+
+        master_frame_2 = Frame(master, background = Default.BACKGROUND)
+        master_frame_2.grid(row = 3)
         for column, step in enumerate(Default.STEP_TYPES):
-            frame = Container(master_frame, default_text = " {step} settings".format(step = step.title()), column = column)
+            frame = Container(master_frame_2, default_text = " {step} settings".format(step = step.title()), column = column)
             self.n_steps[step]     = Input(frame(), "N steps:", Default.N_STEPS[step], label_width = 120, width = 7)
             self.print_every[step] = Input(frame(), "Print every:", Default.PRINT_EVERY[step], row = 1, label_width = 120, width = 7)
         
@@ -114,7 +120,8 @@ class Utils(BasicGUIFunctions):
         self.clean()
 
     
-    def solvate(self, input_file, water_type = Default.WATER_TYPE, output_file = Default.SOLVATED_FILE):
+    def solvate(self, input_file, water_type = Default.WATER_TYPE, solvated_file = Default.SOLVATED_FILE, 
+        tpr_file = Default.IONIZED_TPR, output_file = Default.IONIZED_FILE):
         """
         Adds solvent molecules to the simulation box,
         correctly labeling the added molecules in the topology file.
@@ -123,7 +130,16 @@ class Utils(BasicGUIFunctions):
         self.update_terminal("Adding {water_type} water molecules to simulation ..."\
             .format(water_type = water_type))
         self.run("gmx solvate -cp {input_file} -cs {water_type}.gro -o {output_file} -p topol.top"\
-                .format(input_file = input_file, water_type = water_type, output_file = output_file))
+                .format(input_file = input_file, water_type = water_type, output_file = solvated_file))
+        
+        self.update_terminal("Adding ions to system ...")
+        self.run("gmx grompp -f {mdp} -c {input_file} -p topol.top -o {output_file}"\
+            .format(mdp = self.mdps() + '/ions.mdp', input_file = solvated_file, output_file = tpr_file),
+            update_progress_bar = False)
+
+        self.run("echo '13' | gmx genion -s {input_file} -p topol.top -o {output_file} -pname NA -np {ion_count}"\
+            .format(input_file = tpr_file, output_file = output_file, ion_count = self.ion_count()))
+
         return output_file
 
 
@@ -134,7 +150,7 @@ class Utils(BasicGUIFunctions):
                 
         #1.
         self.update_terminal("Configuring {mdp} and pre-processing topology ...".format(mdp = step.mdp))
-        step.config_mdp(self.mdps(), step.n_steps, step.print_every)
+        step.config_mdp(self.mdps())
         self.run("gmx grompp -f {mdp} -c {input_file} -p topol.top -o {output_file} -maxwarn 1"\
             .format(mdp = step.mdp, input_file = input_file, output_file = step.tpr))
 
@@ -187,7 +203,7 @@ class Utils(BasicGUIFunctions):
     def create_topology_files(self, input_file, output_file = Default.ALL_H_FILE):
         """
         1) Creates a topology file using GMX PDB2GMX;
-        2) Edits the produced topology file to include solvent forcefield.
+        2) Edits the produced topology file to include solvent and ions forcefield.
         """
 
         self.update_terminal("Creating topology files ...")
@@ -200,7 +216,7 @@ class Utils(BasicGUIFunctions):
             for line in file_in:
                 elem = line.split()
                 if len(elem) > 3 and elem[3] == 'restraint':
-                    lines.append('; Include water topology\n#include "amber99sb-ildn.ff/tip3p.itp"\n\n')
+                    lines.append('; Include water topology\n#include "amber99sb-ildn.ff/tip3p.itp"\n\n; Include topology for ions\n#include "amber99sb-ildn.ff/ions.itp"\n\n')
                     lines.append(line)
                 else:
                     lines.append(line)
@@ -289,7 +305,7 @@ class Utils(BasicGUIFunctions):
         to_do += 2                            #create_topology_files
         to_do += 1                            #add_bounding_box
         to_do += 5 * (len(Default.STEPS) - 1) #MD Steps
-        to_do += 1                            #Solvate
+        to_do += 2                            #Solvate
 
         return to_do
     
