@@ -1,7 +1,14 @@
 # Utility Scripts
 
 This repository serves as a backup for utility scripts created by José Pereira, on the scope of Protein Conformation Prediction.
-Most scripts are deployed using a TKinter GUI. It was last updated on 20 April 2018.
+Most scripts are deployed using a TKinter GUI. It was last updated on 26 April 2018. The following sequence of scripts facilitates the process of:
+ 1. Downloading PT trajectory data from Mongo;
+ 2. Run clusteriazation;
+ 3. Transform the selected coarse-grained structure to 'all'-atoms model;
+ 4. Run complete molecular dynamics simulations;
+ 5. Analyze the generated data.
+***
+
 
 ## Atomizer 1.0
 
@@ -25,18 +32,19 @@ The script requires the pre-installment of the following dependencies:
  * A Parallel Tempering Database at a MONGO server
 
 
+
 ## MD Maker 1.0
 
 This script automates the process of running and MD simulation.
 for each simulation step, the user can select the number of steps (or simulation time by multiplying by dt = 0.002), aswell as the frequency of data storage.
 The MD process is comprised of 7 automated steps:
- 1. Preparation (Adds bounding box and creates topology files)
- 2. Minimization 1 (Without solvent)
- 3. Solvation (Adds spc216 water molecules)
- 4. Minimization 2 (With solvent)
- 5. NVT equilibration
- 6. NPT equilibration
- 7. Data collection
+ 1. Preparation (Adds bounding box and creates topology files);
+ 2. Minimization 1 (Without solvent);
+ 3. Solvation (Adds spc216 water molecules);
+ 4. Minimization 2 (With solvent);
+ 5. NVT equilibration;
+ 6. NPT equilibration;
+ 7. Data collection.
 
 ### Prerequisites and dependencies
 
@@ -48,6 +56,7 @@ The script requires the pre-installment of the following dependencies:
  For the full usage of this script, the following files are required:
  * An .mdp storage folder (Avaliable from this repository)
  * A starting .pdb structure
+
 
 
 ## Analyzer 1.0
