@@ -30,8 +30,7 @@ The script requires the pre-installment of the following dependencies:
  For the full usage of this script, the following files are required:
  * PDB structure file of the original protein for RMSD comparison
  * A Parallel Tempering Database at a MONGO server
-
-
+***
 
 ## MD Maker 1.0
 
@@ -56,8 +55,7 @@ The script requires the pre-installment of the following dependencies:
  For the full usage of this script, the following files are required:
  * An .mdp storage folder (Avaliable from this repository)
  * A starting .pdb structure
-
-
+***
 
 ## Analyzer 1.0
 
