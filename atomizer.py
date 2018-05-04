@@ -407,7 +407,6 @@ class Utils:
             self.update_terminal("Writting XTC trajectory to file {output_name} ..."\
                 .format(output_name = output_name))
             size = frames.count(with_limit_and_skip = True)
-            self.Xs = {}
             for n, frame in enumerate(frames):
                 if self.debug_mode():
                     print "{:>5d}/{:>5d}".format(n, size)
