@@ -10,7 +10,7 @@ Most scripts are deployed using a TKinter GUI. It was last updated on 26 April 2
 ***
 
 
-## Atomizer 1.0
+## Atomizer 1.1
 
 This script automates the process of downloading data from MONGO database as XTC trajectory files.
 The XTC trajectory frames are then clustered based on RMSD, and, if requested, the plot depicting Energy values vs RMSD is displayed to the user for Cluster extraction selection. The selected clusters' representative structure is then retrieved and transformed into an all-atom model for MD analysis.
@@ -30,6 +30,18 @@ The script requires the pre-installment of the following dependencies:
  For the full usage of this script, the following files are required:
  * PDB structure file of the original protein for RMSD comparison
  * A Parallel Tempering Database at a MONGO server
+ 
+ 
+### Tool output
+The script outputs the following files to the current working directory ('traj' is the default name):
+ * __traj_all_atoms.pdb__ > Representative structure of the selected cluster in all_atoms form
+ * __traj.log__           > Log file depicting all the clusters formed
+ * __clusters.png__       > Figure of the RMSD vs Energy graph
+ * __traj_clusters.pdb__  > Trajectory where the PDB frames are the representative structures of each cluster (without 'X's)
+ * __traj_repr_str.pdb__  > Representative stucture of the selected cluster in caterpillar form (with 'X')
+ * __others__             > Mostly leftover files, but can be usefull in certain cases: traj.xtc, traj.xvg, rmsd-dist.xvg, traj.xpm
+
+
 ***
 
 ## MD Maker 1.0
