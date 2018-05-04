@@ -41,7 +41,7 @@ The script outputs the following files to the current working directory ('traj' 
  * __traj_repr_str.pdb__  > Representative stucture of the selected cluster in caterpillar form (with 'X')
  * __others__             > Mostly leftover files, but can be usefull in certain cases: traj.xtc, traj.xvg, rmsd-dist.xvg, traj.xpm
 
-
+![alt text](https://raw.githubusercontent.com/JosePereiraUA/utility_scripts/master/atomizer_py_schematics.png)
 ***
 
 ## MD Maker 1.0
