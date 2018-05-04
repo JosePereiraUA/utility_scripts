@@ -35,7 +35,7 @@ class Default:
     DATABASE_PORT  = 27017
     DATABASE_T_ID  = 0
     FROM           = 0
-    TO             = 100
+    TO             = 0
     TRAJECTORY     = "traj.xtc"
     OUTPUT         = "traj"
     METHOD         = "gromos"
@@ -47,7 +47,7 @@ class Default:
     FRAME          = 1
     DEBUG_MODE     = True
     ONLY_PRINT_XTC = False
-    PLOT_ENERGIES  = False
+    PLOT_ENERGIES  = True
     ANNOTATE       = True
 
     #Model specific defaults
