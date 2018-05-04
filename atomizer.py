@@ -35,7 +35,7 @@ class Default:
     DATABASE_PORT  = 27017
     DATABASE_T_ID  = 0
     FROM           = 0
-    TO             = 0
+    TO             = 100
     TRAJECTORY     = "traj.xtc"
     OUTPUT         = "traj"
     METHOD         = "gromos"
@@ -47,7 +47,7 @@ class Default:
     FRAME          = 1
     DEBUG_MODE     = True
     ONLY_PRINT_XTC = False
-    PLOT_ENERGIES  = True
+    PLOT_ENERGIES  = False
     ANNOTATE       = True
 
     #Model specific defaults
@@ -66,7 +66,7 @@ class Default:
     PLOT_COLOR     = "#4682b4"
 
 
-class Utils:
+class Utils(BasicGUIFunctions):
 
     def __init__(self, master):
         """
@@ -75,11 +75,9 @@ class Utils:
         """
         
         #Set application's window settings and title
-        master.configure(background = Default.BACKGROUND)
-        master.title("{title} v{version}".format(title = Default.TITLE, version = Default.VERSION))
-        if not Default.RESIZABLE: master.resizable(0, 0)
-        self.master = master
+        self.config_master(master, Default.TITLE, Default.VERSION, Default.RESIZABLE, Default.BACKGROUND)
 
+        #Set GUI elements
         self.db_name    = Input(master, "Database name:", Default.DATABASE_NAME,  row = 0, label_width = Default.LABEL_WIDTH)
         self.db_host    = Input(master, "Database host:", Default.DATABASE_HOST,  row = 1, label_width = Default.LABEL_WIDTH)
         self.db_port    = Input(master, "Database port:", Default.DATABASE_PORT,  row = 2, label_width = Default.LABEL_WIDTH)
@@ -97,14 +95,9 @@ class Utils:
         self.print_xtc  = CheckBox(frame, "Only print XTC", column = 1, default_status = Default.ONLY_PRINT_XTC)
         self.plot_energ = CheckBox(frame, "Plot energies vs RMSD", column = 2, default_status = Default.PLOT_ENERGIES)
         self.annotate   = CheckBox(frame, "Anotate energy plots", column = 3, default_status = Default.ANNOTATE)
-        Button(master, text="Atomize to {output}_all_atoms.pdb".format(output = Default.OUTPUT),
-            width = 50, command= self.process, activebackground = Default.HOVER_COLOR,
-            relief = 'flat', background = Default.BACKGROUND)\
-            .grid(row = 10, padx = Default.PAD, columnspan = 2)
-        self.progress_bar = Progressbar(master, orient = 'horizontal', mode = 'determinate', length = 400)
-        self.progress_bar.grid(columnspan = 2, row = 11, pady = Default.PAD)
-        self.terminal     = Terminal(master, row = 12, columnspan = 2)
-        self.footer       = Footer(master, Default.FOOTER, row = 13, columnspan = 2)
+        self.add_basic_utilities(master, 10, default_text = "Atomize to {output}_all_atoms.pdb"\
+            .format(output = Default.OUTPUT), pad = Default.PAD, background = Default.BACKGROUND,
+            hover_color = Default.HOVER_COLOR, footer = Default.FOOTER)
 
 
     def process(self):
@@ -115,6 +108,7 @@ class Utils:
         #1. Set progress bar settings
         self.progress_bar['maximum'] = self.to_do()
         self.progress_bar['value'] = 0
+        self.debug = '' if self.debug_mode() else '2>&1'
 
         #2. Verify input
         self.verify_input()
@@ -151,16 +145,6 @@ class Utils:
         self.clean()
 
 
-    def clean(self):
-        """
-        Delete unnecessary files.
-        """
-
-        self.update_terminal("Cleaning unnecessary files ...")
-        self.run("rm -rf *#")
-        self.update_terminal("All tasks successefully performed.")
-
-
     def to_do(self):
         """
         Count the total number of tasks requested to proper set the progress bar.
@@ -174,7 +158,7 @@ class Utils:
         to_do += 4       #extract_frame
         to_do += 4       #all_atoms
         if self.plot_energ():
-            to_do += 2   #plot_energies
+            to_do += 3   #plot_energies
         return to_do
 
 
@@ -219,10 +203,18 @@ class Utils:
     def extract_frame(self, log = Default.OUTPUT + '.log', frame = 1,
         output_name = Default.OUTPUT + '_repr_str.pdb'):
         """
-        Read clusters.pdb file and extract selected frame as xyz to continue workflow and as pdb
+        Read clusters.log file and extract the frame number of the representative
+        structure of the selected cluster;
+        Extract the frame XYZ from MONGO;
+        Recover aminoacid sequence from standard pdb structure;
+        Use the extracted XYZ and aminoacid sequence to write the PDB of the representative structure
+        of the selected cluster;
+
+        Returns the representative structure XYZ.
         """
         
-        #1.
+        #1. Open cluster.log and extract the actual structure number for the representative frame
+        # of the selected cluster
         self.update_terminal("Finding the selected representative structure from cluster {cluster} in {log} ..."\
             .format(cluster = frame, log = log))
         with open(log, 'r') as file_in:
@@ -235,7 +227,7 @@ class Utils:
                     break
         self.update_progress_bar()
 
-        #2.
+        #2. Query MONGO database for the found representative structure number and recover XYZ
         self.update_terminal("Extracting the selected structure ({model}) from MONGO database ..."\
             .format(model = structure_number))
         with pymongo.MongoClient(self.db_host(), int(self.db_port())) as server:
@@ -245,34 +237,33 @@ class Utils:
             xyz = data.find({'step': structure_number}, query)
         self.update_progress_bar()
 
-        #3.
+        #3. Recover aminoacid sequence from the standard PDB structure.
         self.update_terminal("Recovering aminoacid sequence from {standard} ..."\
             .format(standard = self.standard()))
         aa_list = []
         with open(self.standard(), 'r') as file_in:
             for line in file_in:
                 elem = line.split()
-                last_aa = "NONE"
-                if elem[0] == 'ATOM' and not elem[3] == last_aa:
-                    last_aa == elem[3]
+                if elem[0] == 'ATOM' and elem[2] == 'H':
                     aa_list.append(elem[3])
         self.update_progress_bar()
 
-        #4.
+        #4. Use the recovered XYZ and aminoacid sequence to write the representative structure PDB
         self.update_terminal("Writting {output_file} with the selected structure ..."\
             .format(output_file = output_name))
-        n = 0
+        naa = 0
         with open(output_name, 'w') as file_out:
             atoms = xyz[0]['xyz']
             for i, atom in enumerate(atoms, start = 1):
                 symbol = next(Default.ATOM_NAMES)
                 file_out.write(
                     Default.PDB_FORMAT.format(
-                        n = i, symbol = symbol, residue = aa_list[n], chain = 'A',
-                        residue_n = n + 1, x = atom[0], y = atom[1], z = atom[2]
+                        n = i, symbol = symbol, residue = aa_list[naa], chain = 'A',
+                        residue_n = naa + 1, x = atom[0], y = atom[1], z = atom[2]
                     )
                 )
-                if symbol == 'X': n += 1
+                if symbol == 'X':
+                    naa += 1
         self.update_progress_bar()
         
         return xyz[0]['xyz']
@@ -285,7 +276,6 @@ class Utils:
         """
 
         #1. Define necessary variables
-        debug = '' if self.debug_mode() else '2>&1'
         cut_off = float(self.cut_off())
 
         #2. Clusterization (ECHO 0 = all atoms)
@@ -293,8 +283,8 @@ class Utils:
                 .format(output_name = output, cut_off = cut_off))
         self.run("echo '0 \n 0' | gmx cluster -f {trajectory} -s {standard} -o {output}.xpm -g {output}.log -cl {output}_clusters.pdb -cutoff {cut_off} -method {method} -dist {debug}"\
             .format(trajectory = trajectory, standard = standard, output = output,
-                cut_off = cut_off, method = method, debug = debug))
-        self.update_progress_bar()
+                cut_off = cut_off, method = method, debug = self.debug))
+        #self.update_progress_bar()
 
         #3. If energy plot is requested, run plot_energies()
         if self.plot_energ():
@@ -311,7 +301,6 @@ class Utils:
         """
 
         #1. Define necessary variables
-        debug = '' if self.debug_mode() else '2>&1'
         rmsd, total_rmsd   = [], []
         energy = []
         if self.annotate():
@@ -319,7 +308,7 @@ class Utils:
 
         #2. Run GMX RMS to calculate correct RMSD vs original protein (ECHO 0 = all atoms)
         self.run("echo '0 \n 0' | gmx rms -f {trajectory}_clusters.pdb -s {standard} -o {output} {debug}"\
-            .format(trajectory = trajectory, standard = standard, output = output, debug = debug))
+            .format(trajectory = trajectory, standard = standard, output = output, debug = self.debug))
         #3. Read produced .xvg file and extract RMSD values
         with open(output, 'r') as file_in:
             for line in file_in:
@@ -458,54 +447,6 @@ class Utils:
             self.error(Default.INPUT_ERROR, "Cut off value must be greater than 0")
         self.check_file(self.standard())
 
-
-    def check_file(self, file_name):
-        """
-        Checks the existance of a file in the requested directory.
-        Raises a error and exits if it does not exist.
-        """
-
-        self.update_terminal("Checking for the existance of file {file} ..."\
-            .format(file = file_name))
-        if not os.path.isfile(file_name):
-            self.error("Missing File", "{file} not found".format(file = file_name))
-        self.update_progress_bar()
-
-
-    def error(self, error_title, message):
-        """
-        Displays a pop-up alert to user and exits program.
-        """
-
-        alert.showerror(error_title, message)
-        exit(1)
-
-
-    def run(self, command):
-        """
-        Instantiate a new terminal command (GROMACS)
-        """
-
-        os.popen(command)
-        self.update_progress_bar()
-
-
-    def update_progress_bar(self):
-        """
-        Increases the completness of the progress bar by one step.
-        """
-
-        self.progress_bar['value'] = self.progress_bar['value'] + 1
-        root.update_idletasks()
-
-    
-    def update_terminal(self, message):
-        """
-        Shows a message in the GUI terminal.
-        """
-
-        self.terminal(message)
-        root.update_idletasks()
 
 #*****************************************
 #*                 MAIN                  *

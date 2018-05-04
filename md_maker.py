@@ -88,8 +88,8 @@ class Utils(BasicGUIFunctions):
         
         self.debug_mode = CheckBox(master, "Debug Mode", default_status = Default.DEBUG_MODE, row = 4)
         
-        self.add_basic_utilities(master, 5, pad = Default.PAD, background = Default.BACKGROUND,
-            hover_color = Default.HOVER_COLOR, footer = Default.FOOTER)
+        self.add_basic_utilities(master, 5, default_text = "Start_MD", pad = Default.PAD,
+            background = Default.BACKGROUND, hover_color = Default.HOVER_COLOR, footer = Default.FOOTER)
 
 
     def process(self):

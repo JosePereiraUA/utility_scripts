@@ -283,12 +283,18 @@ class BasicGUIFunctions:
         self.update_terminal("All tasks successefully performed.")
 
     
-    def add_basic_utilities(self, master, min_row,
+    def add_basic_utilities(self, master, min_row, default_text = "Start",
         pad = 10, background = 'white', hover_color = 'steel blue', footer = 'José Pereira @ 2018'):
+        """
+        Adds basic utility elements to the user interface:
+        -> Start process button
+        -> Progress bar
+        -> Terminal display
+        -> Footer message
+        """
 
-        Button(master, text="Start MD",
-            width = 50, command= self.process, activebackground = hover_color,
-            relief = 'flat', background = background)\
+        Button(master, text = default_text, width = 50, command= self.process,
+            activebackground = hover_color, relief = 'flat', background = background)\
             .grid(row = min_row, padx = pad, columnspan = 2)
         self.progress_bar = ttk.Progressbar(master, orient = 'horizontal', mode = 'determinate', length = 400)
         self.progress_bar.grid(columnspan = 2, row = min_row + 1, pady = pad)
@@ -298,11 +304,30 @@ class BasicGUIFunctions:
     
     def config_master(self, master,
         title = "Tool", version = "DEV_MODE", resizable = True, background = 'white'):
+        """
+        Sets basic master configurations:
+        -> Background color
+        -> Window title
+        -> Resizable options
+        """
 
         master.configure(background = background)
         master.title("{title} v{version}".format(title = title, version = version))
         if not resizable: master.resizable(0, 0)
         self.root = master
+
+
+    def check_file(self, file_name):
+        """
+        Checks the existance of a file in the requested directory.
+        Raises a error and exits if it does not exist.
+        """
+
+        self.update_terminal("Checking for the existance of file {file} ..."\
+            .format(file = file_name))
+        if not os.path.isfile(file_name):
+            self.error("Missing File", "{file} not found".format(file = file_name))
+        self.update_progress_bar()
 
 
 class Step:
