@@ -35,10 +35,24 @@ ref-t                    = 300.0  	 ; Temperature of heat bath
 pcoupl                   = no    	 ; no pressure coupling in NVT
 ; GENERATE VELOCITIES FOR STARTUP RUN
 ;----------------------------------------------------------
-gen_vel                  = yes      	 ; Assign velocities to particles by taking them randomly from a Maxwell distribution
+gen_vel                  = no      	 ; Assign velocities to particles by taking them randomly from a Maxwell distribution
 gen_temp                 = 300     	 ; Temperature to generate corresponding Maxwell distribution
 ; OPTIONS FOR BONDS
 ;----------------------------------------------------------
 constraints              = H-bonds  ; H bonds will be treated as constraints (fixed length)
 constraint_algorithm     = lincs    ; holonomic constraints
-continuation             = no       ; first dynamics run
+continuation             = yes       ; first dynamics run
+
+; Pull code
+pull                    = yes
+pull_ncoords            = 1         ; only one reaction coordinate 
+pull_ngroups            = 2         ; two groups defining one reaction coordinate 
+pull_group1_name        = ACTIVESITE 
+pull_group2_name        = CBZ 
+pull_coord1_type        = umbrella  ; harmonic potential
+pull_coord1_geometry    = distance  ; simple distance increase 
+pull_coord1_groups      = 1 2
+pull_coord1_start       = yes       ; define initial COM distance > 0
+pull_coord1_rate        = 0.01      ; 0.01 nm per ps = 100 nm per ns (?)
+pull_coord1_k           = 1000      ; kJ mol^-1 nm^-2
+

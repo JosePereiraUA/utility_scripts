@@ -298,7 +298,7 @@ class Utils:
             warning(Default.INPUT_ERROR, "Please define a single temperature index to analize energy contributions")
             return
         if self.rmsd.get_status(): f1,(ax1,ax2,ax3, ax4) = plt.subplots(4)
-        else: f1,(ax1,ax2,ax3) = plt.subplots(3)
+        else: f1,(ax1) = plt.subplots(1)
         name, host, port= self.name_g.get(), self.host_g.get(), int(self.port_g.get())
         every = int(self.every_g.get())
         with pymongo.MongoClient(host, port) as mongo:
@@ -310,22 +310,26 @@ class Utils:
                 for temp in temperature_indexes:
                     structures = 'structures'+str(temp)
                     energies = [float(item['energy']) for item in mongo[name][structures].find(query(every), {'energy': 1, '_id': 0})]
-                    ax3.plot(energies, label = str(temp))
+                    # ax3.plot(energies, label = str(temp))
                     h, edges = np.histogram(energies, bins = Default.BINS)
                     bin_centers = 0.5*(edges[:-1] + edges[1:])
-                    ax2.plot(bin_centers, h, label = str(temp))
-                    ax2.legend()
+                    # ax2.plot(bin_centers, h, label = str(temp))
+                    # ax2.legend()
             else:
                 f1.canvas.set_window_title('System status for temperature {}'.format(self.temperature_g.get()))
                 structures = 'structures' + self.temperature_g.get()
                 energies = [float(item['energy']) for item in mongo[name][structures].find(query(every), {'energy': 1, '_id': 0})]
-                ax3.plot(energies, label = self.temperature_g.get())
+                # ax3.plot(energies, label = self.temperature_g.get())
                 h, edges = np.histogram(energies, bins = Default.BINS)
                 bin_centers = 0.5*(edges[:-1] + edges[1:])
-                ax2.plot(bin_centers, h, label = self.temperature_g.get())
-                ax2.legend()
+                # ax2.plot(bin_centers, h, label = self.temperature_g.get())
+                # ax2.legend()
             for station in station_list:
                 ax1.plot([float(item['temperature']) for item in mongo[name]['iterations'].find({'station': station}, {'temperature': 1, '_id': 0})])
+                with open("%s.dat" % (station), "w") as file_out:
+                    for item in mongo[name]['iterations'].find({'station': station}, {'temperature': 1, '_id': 0}):
+                        for value in [str(item['temperature'])]:
+                            file_out.write("\n%s" % (value))
             if self.rmsd.get_status():
                 input_prefix = self.rmsd_prefix.get()
                 i, current_rmsd = 1, 0
@@ -353,7 +357,6 @@ class Utils:
             plt.show()
 
     def produce_temperatures(self):
-        print "Called"
         temp_count, temp_exp = int(self.count_t.get()), float(self.exp_t.get())
         min_temp, max_temp = self.temps.get_from(as_float = True), self.temps.get_to(as_float = True)
         threshold = float(self.threshold_t.get())
@@ -377,7 +380,7 @@ class Utils:
         alpha, size = float(self.alpha_cdf.get()), float(self.size_cdf.get())
         if self.type_c.get() == 1:
             MIN, MAX = float(self.min_cdf.get()), float(self.max_cdf.get())
-            raw = load_raw(self.raw_cdf.get())
+            raw = load_raw(self.z.get())
             raw[raw>MAX] = MAX
             raw[raw<MIN] = MIN
             x = np.arange(- size, size + 1)

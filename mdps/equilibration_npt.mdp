@@ -5,7 +5,7 @@ define                   -POSRES
 ; RUN CONTROL PARAMETERS
 ;----------------------------------------------------------
 integrator               = md
-dt                       = 0.002    ; time step (in ps)
+dt                       = 
 nsteps                   = 
 ; OUTPUT CONTROL OPTIONS
 ;----------------------------------------------------------

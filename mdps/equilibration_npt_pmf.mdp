@@ -42,3 +42,17 @@ gen_temp                 = 300     	 ; Temperature to generate corresponding Max
 constraints              = H-bonds  ; H bonds will be treated as constraints (fixed length)
 constraint_algorithm     = lincs    ; holonomic constraints
 continuation             = no       ; first dynamics run
+
+; Pull code
+pull                    = yes
+pull_ncoords            = 1         ; only one reaction coordinate 
+pull_ngroups            = 2         ; two groups defining one reaction coordinate 
+pull_group1_name        = ACTIVESITE 
+pull_group2_name        = CBZ 
+pull_coord1_type        = umbrella  ; harmonic potential
+pull_coord1_geometry    = distance  ; simple distance increase 
+pull_coord1_groups      = 1 2
+pull_coord1_start       = yes       ; define initial COM distance > 0
+pull_coord1_rate        = 0.0      ; 0.1 nm per ps = 100 nm per ns
+pull_coord1_k           = 1000      ; kJ mol^-1 nm^-2
+

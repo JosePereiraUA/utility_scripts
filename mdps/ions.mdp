@@ -13,11 +13,13 @@ nstlog                   = 1000
 nstxout-compressed       = 1000
 ; NEIGHBORSEARCHING PARAMETERS
 ;----------------------------------------------------------
+nstlist                  = 1
 cutoff-scheme            = Verlet
 PBC                      = xyz
+ns_type                  = grid
 ; OPTIONS FOR ELECTROSTATICS AND VDW
 ;----------------------------------------------------------
-coulombtype              = PME
+coulombtype              = cutoff
 rcoulomb                 = 1.2
 vdwtype                  = Cut-off
 rvdw                     = 1.2

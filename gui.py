@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from Tkinter import *
-import ttk
-import tkFileDialog as filedialog
-import tkMessageBox as alert
+from tkinter import *
+# import ttk
+from tkinter import filedialog
+from tkinter import messagebox
 import os
 
 class Global:
@@ -16,10 +16,12 @@ class Global:
     FONT_SIZE       = 10
     FONT            = "System"
     HIGHLIGHT_COLOR = "steel blue"
-    STICKY          = "w"
+    HOVER_COLOR     = "steel blue"
+    STICKY          = "nw"
     BUTTON_SIZE     = 12
     RELIEF          = SUNKEN
     BORDER_WIDTH    = 1
+    INPUT_ERROR     = "Input error"
 
 
 class Input:
@@ -166,7 +168,7 @@ class Container:
 
         self.frame = LabelFrame(master, text = default_text, foreground = font_color,
                 background = background, borderwidth = borderwidth, relief = relief)
-        self.frame.grid(row = row, column = column, padx = 10)
+        self.frame.grid(row = row, column = column, padx = 10, sticky = sticky)
         self.frame.config(font=(font, font_size))
 
     def __call__(self):
@@ -233,6 +235,33 @@ class Slice:
         self.end   = Input(frame, text_to  , default_to, column = 1, width = width, label_width = 0)
 
 
+class RadioButtonGroup():
+
+    DEFAULT_STICKY      = Global.STICKY
+    DEFAULT_BACKGROUND  = Global.BACKGROUND
+    DEFAULT_PAD         = Global.PAD
+    DEFAULT_HOVER_COLOR = Global.HOVER_COLOR
+
+    def __init__(self, master, row = 0, column = 0, columnspan = 1, sticky = DEFAULT_STICKY,
+        background = DEFAULT_BACKGROUND, pad = DEFAULT_PAD, hover_color = DEFAULT_HOVER_COLOR,
+        default_state = 0, button_texts = []):
+
+        buttons = {}
+        frame = Frame(master, background = background)
+        frame.grid(row = row, column = column, columnspan = columnspan, sticky = sticky)
+        self.selection = IntVar(value = 0)
+        for i, button in enumerate(button_texts):
+            buttons[i] = Radiobutton(frame, text = button, variable = self.selection, value = i,
+                background = background, borderwidth = 0, activebackground = hover_color)
+            buttons[i].grid(row = 0, column = i, pady = (pad, 0), padx = pad, sticky = sticky)
+        buttons[default_state].select()
+
+    def __call__(self):
+        return self.selection.get()
+    
+
+
+
 class BasicGUIFunctions:
 
     def run(self, command, update_progress_bar = True):
@@ -240,7 +269,7 @@ class BasicGUIFunctions:
         Instantiate a new terminal command (GROMACS)
         """
         command = command + " " + self.debug
-        os.popen(command)
+        os.system(command)
         if update_progress_bar:
             self.update_progress_bar()
 
@@ -255,12 +284,12 @@ class BasicGUIFunctions:
             exit(1)
 
 
-    def update_progress_bar(self):
+    def update_progress_bar(self, value = 1):
         """
         Increases the completness of the progress bar by one step.
         """
 
-        self.progress_bar['value'] = self.progress_bar['value'] + 1
+        self.progress_bar['value'] = self.progress_bar['value'] + value
         self.root.update_idletasks()
 
     
@@ -283,7 +312,7 @@ class BasicGUIFunctions:
         self.update_terminal("All tasks successefully performed.")
 
     
-    def add_basic_utilities(self, master, min_row, default_text = "Start",
+    def add_basic_utilities(self, master, row = 0, default_text = "Start",
         pad = 10, background = 'white', hover_color = 'steel blue', footer = 'José Pereira @ 2018'):
         """
         Adds basic utility elements to the user interface:
@@ -293,13 +322,41 @@ class BasicGUIFunctions:
         -> Footer message
         """
 
-        Button(master, text = default_text, width = 50, command= self.process,
+        frame = Frame(master, background = background)
+        frame.grid(row = row, sticky = 'w')
+        Button(frame, text = default_text, width = 90, command= self.process,
             activebackground = hover_color, relief = 'flat', background = background)\
-            .grid(row = min_row, padx = pad, columnspan = 2)
-        self.progress_bar = ttk.Progressbar(master, orient = 'horizontal', mode = 'determinate', length = 400)
-        self.progress_bar.grid(columnspan = 2, row = min_row + 1, pady = pad)
-        self.terminal     = Terminal(master, row = min_row + 2, columnspan = 2)
-        self.footer       = Footer(master, footer, row = min_row + 3, columnspan = 2)
+            .grid(row = 0, padx = pad, columnspan = 2)
+        self.progress_bar = ttk.Progressbar(frame, orient = 'horizontal', mode = 'determinate', length = 600)
+        self.progress_bar.grid(columnspan = 2, row = 1, pady = pad)
+        self.terminal     = Terminal(frame, row = 2, columnspan = 2)
+        self.footer       = Footer(frame, footer, row = 3, columnspan = 2)
+
+    
+    def add_database_picker(self, master, row = 0, default_database_name = "Database name",
+        default_database_host = "Database host", default_database_port = "Database port",
+        default_database_t_id = "Temperature ID", default_from = 0, default_to = 0, default_every = 1,
+        background = 'white', label_width = 170):
+        """
+        Adds necessary elements to the user interface in order to pick a database from mongo:
+        -> Database name (String)
+        -> Host (String::IP)
+        -> Port (Int)
+        -> Temperature ID (ID)
+        -> Crop (From::Int, To::Int)
+        -> Every (Int)
+        """
+
+        frame = Frame(master, background = background)
+        frame.grid(row = row, sticky = 'w')
+        self.db_name    = Input(frame, "Database name:", default_database_name,  row = 0    , label_width = label_width)
+        self.db_host    = Input(frame, "Database host:", default_database_host,  row = 1, label_width = label_width)
+        self.db_port    = Input(frame, "Database port:", default_database_port,  row = 2, label_width = label_width)
+        self.db_t_id    = Input(frame, "Temperature ID:",default_database_t_id,  row = 3, label_width = label_width)
+        self.crop       = Slice(frame, "From:", default_from, "To:", default_to, row = 4, label_width = label_width)
+        self.every      = Input(frame, "Print every:",   default_every,    row = 5, label_width = label_width)
+        Title(frame, "Selecting 'To:' as 0 outputs the trajectory until the end.", row = 6, font_size = 5)
+
 
     
     def config_master(self, master,
@@ -317,16 +374,32 @@ class BasicGUIFunctions:
         self.root = master
 
 
-    def check_file(self, file_name):
+    def check_file(self, file_name, update_progress_bar = True):
         """
         Checks the existance of a file in the requested directory.
         Raises a error and exits if it does not exist.
         """
 
-        self.update_terminal("Checking for the existance of file {file} ..."\
-            .format(file = file_name))
+        if update_progress_bar:
+            self.update_terminal("Checking for the existance of file {file} ..."\
+                .format(file = file_name))
         if not os.path.isfile(file_name):
             self.error("Missing File", "{file} not found".format(file = file_name))
+        if update_progress_bar:
+            self.update_progress_bar()
+
+    def check_file_delete(self, file_name):
+        """
+        Checks the existance of a file in the requested directory.
+        Prompts the user to delete the file and continue.
+        """
+
+        self.update_terminal("Checking for the existance of file {file} ..."\
+            .format(file = file_name))
+        if os.path.isfile(file_name):
+            delete = alert.askyesno("Existent file found",
+                "{file} already exists the current directory. Delete and continue ?".format(file = file_name))
+            self.run("rm -rf {file}".format(file = file_name), update_progress_bar = False) if delete else exit(1)
         self.update_progress_bar()
 
 
@@ -338,6 +411,7 @@ class Step:
         self.tpr   = title + '.tpr'
         self.n_steps     = 0
         self.print_every = 0
+        self.time_step   = 0.0
 
     def config_mdp(self, mdp_dir):
 
@@ -345,6 +419,9 @@ class Step:
         
         with open(mdp_dir + '/' + self.mdp, 'r') as file_in:
             for line in file_in:
+                if line.startswith("dt"):
+                    line = line[:-2]
+                    line = line + " " + str(self.time_step) + '\n'
                 if line.startswith("nsteps"):
                     line = line[:-2]
                     line = line + " " + str(self.n_steps) + '\n'

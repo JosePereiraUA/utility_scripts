@@ -30,12 +30,12 @@ class Default:
     INPUT_ERROR    = "Input error"
     
     #Input defaults
-    DATABASE_NAME  = '1ctf_teste_4_0'
+    DATABASE_NAME  = '1ctf_7_5_2018'
     DATABASE_HOST  = '192.168.179.114'
     DATABASE_PORT  = 27017
     DATABASE_T_ID  = 0
     FROM           = 0
-    TO             = 100
+    TO             = 0
     TRAJECTORY     = "traj.xtc"
     OUTPUT         = "traj"
     METHOD         = "gromos"
@@ -43,11 +43,11 @@ class Default:
     STANDARD       = "model.pdb"
     PLOT_NAME      = "clusters.png"
     CUT_OFF        = 0.5
-    PRINT_EVERY    = 10
+    PRINT_EVERY    = 100
     FRAME          = 1
     DEBUG_MODE     = True
     ONLY_PRINT_XTC = False
-    PLOT_ENERGIES  = False
+    PLOT_ENERGIES  = True
     ANNOTATE       = True
 
     #Model specific defaults
@@ -223,7 +223,7 @@ class Utils(BasicGUIFunctions):
                 if len(elem) <= 0:
                     continue
                 if not elem[0] == '|' and elem[1] == '|' and not line.startswith('cl.') and int(elem[0]) == frame:
-                    structure_number = int(float(elem[5]))
+                    structure_number = int(self.crop.start()) + int(float(elem[5]))
                     break
         self.update_progress_bar()
 
@@ -303,8 +303,7 @@ class Utils(BasicGUIFunctions):
         #1. Define necessary variables
         rmsd, total_rmsd   = [], []
         energy = []
-        if self.annotate():
-            labels = []
+        labels = []
 
         #2. Run GMX RMS to calculate correct RMSD vs original protein (ECHO 0 = all atoms)
         self.run("echo '0 \n 0' | gmx rms -f {trajectory}_clusters.pdb -s {standard} -o {output} {debug}"\
@@ -332,18 +331,23 @@ class Utils(BasicGUIFunctions):
                         energy.append(self.energy[int(line[min_value:max_value])])
                     except ValueError:
                         self.error("Input Error", 'Cut-Off is too big, the resulting RMSD values between structures of the same cluster exceeds 10 Angstrom.')
-                    if self.annotate():
-                        labels.append((elem[0], elem[2], int(line[min_value:max_value])))
+                    labels.append((elem[0], elem[2], int(line[min_value:max_value])))
         self.max_cluster = len(rmsd) + 1
         self.update_progress_bar()
 
         #5. Plot RMSD vs energy
         self.update_terminal("Plotting RMSD vs energy ...")
         plt.scatter(rmsd, energy, s = [int(l[1]) * Default.BLOB_SCALE for l in labels], color = Default.PLOT_COLOR)
+        size_l = [int(l[1]) * Default.BLOB_SCALE for l in labels]
+        with open("cluster_info.dat", "w") as file_out:
+            for i in xrange(0, len(rmsd)):
+                #print type(size_l[i]), type(energy[i]), type(rmsd[i])
+                file_out.write("{:>7.3f} {:>7.3f} {:>7d}\n".format(rmsd[i], energy[i], size_l[i]))
+
         plt.xlabel("RMSD (Angstrom)"), plt.ylabel("Energy (KJ/mol)")
         sizes = [int(label[1]) for label in labels]
         if len(sizes) == 0:
-            self.error('Input Error', 'Cut-Off is too small: no clusters were built.')
+            self.error('Input Error', 'Cut-Off is too small or not enough structures: no clusters were built.')
         avg_size, std_size = sum(sizes) / len(sizes), np.std(np.asarray(sizes))
         plt.title("Average cluster size: {avg_size} +/- {std_size:<.3f}"\
             .format(avg_size = avg_size, std_size = std_size))
@@ -392,7 +396,7 @@ class Utils(BasicGUIFunctions):
                 frames.limit(int(self.crop.end()) - int(self.crop.start()))
             self.update_progress_bar()
 
-            #5. Write XTC file, applying PRINT EVERY settings
+            #5. Write XTC file, applying PRINT EVERY settings, and WITHOUT X's
             self.update_terminal("Writting XTC trajectory to file {output_name} ..."\
                 .format(output_name = output_name))
             size = frames.count(with_limit_and_skip = True)
@@ -420,14 +424,17 @@ class Utils(BasicGUIFunctions):
         Verifies input:
         1) Checks if dabate exists in the requested server
         2) Checks if the temperature ID exists in the selected database
-        3) Checks if cut-off is possible
-        4) Checks if STANDARD protein pdb file for RMSD comparison exists
+        3) Checks if XYZ data exists for the selected temperature ID
+        4) Checks if cut-off is possible
+        5) Checks if STANDARD protein pdb file for RMSD comparison exists
         """
 
         with pymongo.MongoClient(self.db_host(), int(self.db_port())) as server:
             
             self.update_terminal("Connecting to database {name} @ {host}:{port} ..."\
                 .format(name = self.db_name(), host = self.db_host(), port = self.db_port()))
+            
+            #1. Check if database exists
             database_list = [str(db) for db in server.database_names()]
             if not self.db_name() in database_list:
                 self.error("Missing database", "{name} not found @ {host}:{port}"\
@@ -436,15 +443,27 @@ class Utils(BasicGUIFunctions):
 
             self.update_terminal("Fetching temperature ID {t_id} from database {name} @ {host}:{port} ..."\
                 .format(t_id = self.db_t_id(), name = self.db_name(), host = self.db_host(), port = self.db_port()))
+            
+            #2. Check if temperature ID exists
             temperature = 'structures{t_id}'.format(t_id = self.db_t_id())
             temperature_list = [str(temp) for temp in server[self.db_name()].collection_names()]
             if not temperature in temperature_list:
                 self.error("Missing temperature ID", "Temperature ID {t_id} not found {name} database"\
                     .format(t_id = self.db_t_id(), name = self.db_name()))
+            
+            #3. Check if existent temperature has xyz info
+            try:
+                checker = server[self.db_name()][temperature].find_one({}, {'xyz': 1, '_id': 0})['xyz']
+            except KeyError:
+                self.error("No XYZ data", "Temperature ID {t_id} does not contain any XYZ data"\
+                    .format(t_id = self.db_t_id()))
             self.update_progress_bar()
 
+        #4. Check if cut-off is a possible value
         if self.cut_off() <= 0:
             self.error(Default.INPUT_ERROR, "Cut off value must be greater than 0")
+        
+        #5. Check if standard file for RMSD comparison exists
         self.check_file(self.standard())
 
 
